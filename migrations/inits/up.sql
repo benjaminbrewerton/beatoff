@@ -1,75 +1,84 @@
 -- LeagueID = uuid7 for timestamp
 CREATE TABLE Leagues (
-    LeagueID BINARY(16) PRIMARY KEY,
-    LeagueDesc TEXT NOT NULL
+    id BINARY(16) PRIMARY KEY NOT NULL,
+    description TEXT NOT NULL
 );
 
 -- UserID = uuid7 for timestamp
 CREATE TABLE Users (
-    UserID BINARY(16) PRIMARY KEY,
-    FirstName varchar(50) NOT NULL,
-    LastName varchar(50) NOT NULL,
-    PhoneNum varchar(20) NOT NULL
+    id BINARY(16) PRIMARY KEY NOT NULL,
+    first_name varchar(50) NOT NULL,
+    last_name varchar(50) NOT NULL,
+    phone_num varchar(20) NOT NULL
 );
 
 -- Spotify uses a base62 encoding scheme for its IDs which occupy 16 bytes of space for a serialised UUID.
 CREATE TABLE Artists (
-    ArtistID BINARY(16) PRIMARY KEY,
-    ArtistName varchar(256) NOT NULL
+    id BINARY(16) PRIMARY KEY NOT NULL,
+    name varchar(256) NOT NULL
 );
 
 CREATE TABLE Songs (
-    SongID BINARY(16) PRIMARY KEY,
-    Title varchar(256) NOT NULL,
-    AlbumTitle varchar(256) NOT NULL,
-    ReleaseDate INT8 NOT NULL
+    id BINARY(16) PRIMARY KEY NOT NULL,
+    title varchar(256) NOT NULL,
+    album_title varchar(256) NOT NULL,
+    release_date INT8 NOT NULL
 );
 
 -- Join the many-to-many relationship with songs and artists up with inner joins
 CREATE TABLE ArtistsSongs (
-    ArtistID BINARY(16) NOT NULL,
-    SongID BINARY(16) NOT NULL,
-    FOREIGN KEY (ArtistID) REFERENCES Artists(ArtistID) ON DELETE CASCADE,
-    FOREIGN KEY (SongID) REFERENCES Songs(SongID) ON DELETE CASCADE,
-    PRIMARY KEY (ArtistID, SongID)
+    artist_id BINARY(16) NOT NULL NOT NULL,
+    song_id BINARY(16) NOT NULL,
+    FOREIGN KEY (artist_id) REFERENCES Artists(id) ON DELETE CASCADE,
+    FOREIGN KEY (song_id) REFERENCES Songs(id) ON DELETE CASCADE,
+    PRIMARY KEY (artist_id, song_id)
 );
+CREATE INDEX idx_artists_songs ON ArtistsSongs(song_id);
 
-CREATE INDEX idx_artists_songs ON ArtistsSongs(SongID);
-
--- SubmissionID = uuid7 for timestamp
+-- id = uuid7 for timestamp
 CREATE TABLE Submissions (
-    SubmissionID BINARY(16) PRIMARY KEY,
-    SongID BINARY(16) NOT NULL,
-    RoundID BINARY(16) NOT NULL,
-    CONSTRAINT c_RoundID FOREIGN KEY (RoundID) REFERENCES Rounds(RoundID)
+    id BINARY(16) PRIMARY KEY NOT NULL,
+    song_id BINARY(16) NOT NULL,
+    round_id BINARY(16) NOT NULL,
+    CONSTRAINT s_id FOREIGN KEY (song_id) REFERENCES Songs(id)
+    CONSTRAINT c_id FOREIGN KEY (round_id) REFERENCES Rounds(id)
 );
 
--- RoundID = uuid7 for timestamp
+-- id = uuid7 for timestamp
 CREATE TABLE Rounds (
-    RoundID BINARY(16) PRIMARY KEY,
-    RoundName varchar(256) NOT NULL,
-    RoundDesc TEXT NOT NULL,
-    LeagueID BINARY(16) NOT NULL,
-    CONSTRAINT c_LeagueID FOREIGN KEY (LeagueID) REFERENCES Leagues(LeagueID)
+    id BINARY(16) PRIMARY KEY NOT NULL,
+    name varchar(256) NOT NULL,
+    description TEXT NOT NULL,
+    league_id BINARY(16) NOT NULL,
+    CONSTRAINT c_lid FOREIGN KEY (league_id) REFERENCES Leagues(id)
 );
 
 -- VoteID = uuid7 for timestamp
 CREATE TABLE Votes (
-    VoteID BINARY(16) PRIMARY KEY,
-    Count INT4 NOT NULL,
-    Finalised BOOLEAN DEFAULT FALSE NOT NULL,
-    UserID BINARY(16) NOT NULL,
-    RoundID BINARY(16) NOT NULL,
-    SubmissionID BINARY(16) NOT NULL,
-    CONSTRAINT c_UserID FOREIGN KEY (UserID) REFERENCES Users(UserID),
-    CONSTRAINT c_RoundID FOREIGN KEY (RoundID) REFERENCES Rounds(RoundID),
-    CONSTRAINT c_SubmissionID FOREIGN KEY (SubmissionID) REFERENCES Submissions(SubmissionID)
+    id BINARY(16) PRIMARY KEY NOT NULL,
+    count INT4 NOT NULL,
+    user_id BINARY(16) NOT NULL,
+    round_id BINARY(16) NOT NULL,
+    submission_id BINARY(16) NOT NULL,
+    CONSTRAINT c_uid FOREIGN KEY (user_id) REFERENCES Users(id),
+    CONSTRAINT c_rid FOREIGN KEY (round_id) REFERENCES Rounds(id),
+    CONSTRAINT c_sid FOREIGN KEY (submission_id) REFERENCES Submissions(id)
 );
+
+-- M-M join table for the final results of a round. Old vote entries are kept detached in the Votes table.
+CREATE TABLE FinalVotes (
+    round_id BINARY(16) NOT NULL,
+    vote_id BINARY(16) NOT NULL,
+    FOREIGN KEY (round_id) REFERENCES Rounds(id) ON DELETE CASCADE,
+    FOREIGN KEY (vote_id) REFERENCES Votes(id) ON DELETE CASCADE,
+    PRIMARY KEY (round_id, vote_id)
+);
+CREATE INDEX idx_final_votes ON FinalVotes(vote_id);
 
 -- CommentID = uuid7 for timestamp
 CREATE TABLE Comments (
-    CommentID BINARY(16) PRIMARY KEY,
-    Content TEXT NOT NULL,
-    VoteID BINARY(16) NOT NULL,
-    CONSTRAINT c_VoteID FOREIGN KEY (VoteID) REFERENCES Votes(VoteID)
+    id BINARY(16) PRIMARY KEY NOT NULL,
+    content TEXT NOT NULL,
+    vote_id BINARY(16) NOT NULL,
+    CONSTRAINT c_vid FOREIGN KEY (vote_id) REFERENCES Votes(id)
 );
